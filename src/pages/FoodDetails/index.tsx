@@ -10,6 +10,7 @@ import { Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import MaterialIcon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { format } from 'prettier';
 import formatValue from '../../utils/formatValue';
 
 import api from '../../services/api';
@@ -74,6 +75,21 @@ const FoodDetails: React.FC = () => {
   useEffect(() => {
     async function loadFood(): Promise<void> {
       // Load a specific food with extras based on routeParams id
+      const { id } = routeParams;
+      const response = await api.get(`/foods/${id}`);
+      const { data } = response;
+      const foodParsed = {
+        ...data,
+        formattedPrice: formatValue(data.price),
+      };
+      setFood(foodParsed);
+
+      const extrasParsed = data.extras.map((item: Extra) => ({
+        ...item,
+        quantity: 0,
+      }));
+
+      setExtras(extrasParsed);
     }
 
     loadFood();
@@ -81,26 +97,56 @@ const FoodDetails: React.FC = () => {
 
   function handleIncrementExtra(id: number): void {
     // Increment extra quantity
+    const extrasEdited = extras.map(extra => {
+      if (extra.id === id) {
+        return {
+          ...extra,
+          quantity: extra.quantity + 1,
+        };
+      }
+      return extra;
+    });
+    setExtras(extrasEdited);
   }
 
   function handleDecrementExtra(id: number): void {
-    // Decrement extra quantity
+    const extrasEdited = extras.map(extra => {
+      if (extra.id === id && extra.quantity > 0) {
+        return {
+          ...extra,
+          quantity: extra.quantity - 1,
+        };
+      }
+      return extra;
+    });
+    setExtras(extrasEdited);
   }
 
   function handleIncrementFood(): void {
     // Increment food quantity
+    setFoodQuantity(state => state + 1);
   }
 
   function handleDecrementFood(): void {
     // Decrement food quantity
+    if (foodQuantity > 1) {
+      setFoodQuantity(state => state - 1);
+    }
   }
 
   const toggleFavorite = useCallback(() => {
     // Toggle if food is favorite or not
+    setIsFavorite(!isFavorite);
   }, [isFavorite, food]);
 
   const cartTotal = useMemo(() => {
-    // Calculate cartTotal
+    const extrasCost = extras.reduce((total, item) => {
+      const extraPrice = item.value * item.quantity;
+
+      return total + extraPrice;
+    }, 0);
+
+    return formatValue((food.price + extrasCost) * foodQuantity);
   }, [extras, food, foodQuantity]);
 
   async function handleFinishOrder(): Promise<void> {

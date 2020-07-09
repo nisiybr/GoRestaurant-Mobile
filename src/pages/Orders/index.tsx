@@ -23,8 +23,8 @@ interface Food {
   name: string;
   description: string;
   price: number;
-  formattedValue: number;
   thumbnail_url: string;
+  formattedValue: string;
 }
 
 const Orders: React.FC = () => {
@@ -32,7 +32,15 @@ const Orders: React.FC = () => {
 
   useEffect(() => {
     async function loadOrders(): Promise<void> {
-      // Load orders from API
+      const response = await api.get('/orders');
+      const { data } = response;
+
+      const ordersParsed = data.map((item: Food) => ({
+        ...item,
+        formattedValue: formatValue(item.price),
+      })) as Food[];
+
+      setOrders(ordersParsed);
     }
 
     loadOrders();
@@ -59,7 +67,7 @@ const Orders: React.FC = () => {
               <FoodContent>
                 <FoodTitle>{item.name}</FoodTitle>
                 <FoodDescription>{item.description}</FoodDescription>
-                <FoodPricing>{item.formattedPrice}</FoodPricing>
+                <FoodPricing>{item.formattedValue}</FoodPricing>
               </FoodContent>
             </Food>
           )}

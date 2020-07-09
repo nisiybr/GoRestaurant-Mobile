@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Image, ScrollView } from 'react-native';
 
+import { AxiosResponse } from 'axios';
+
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
 import Logo from '../../assets/logo-header.png';
@@ -27,6 +29,14 @@ import {
   FoodDescription,
   FoodPricing,
 } from './styles';
+
+interface ResponseFood {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  thumbnail_url: string;
+}
 
 interface Food {
   id: number;
@@ -55,11 +65,34 @@ const Dashboard: React.FC = () => {
 
   async function handleNavigate(id: number): Promise<void> {
     // Navigate do ProductDetails page
+    navigation.navigate('FoodDetails', { id });
   }
 
   useEffect(() => {
     async function loadFoods(): Promise<void> {
       // Load Foods from API
+      let response = [] as AxiosResponse;
+      if (selectedCategory) {
+        response = await api.get('/foods', {
+          params: {
+            category_like: selectedCategory,
+            name_like: searchValue === '' ? undefined : searchValue,
+          },
+        });
+      } else {
+        response = await api.get('/foods', {
+          params: {
+            name_like: searchValue === '' ? undefined : searchValue,
+          },
+        });
+      }
+      const data = response.data as ResponseFood[];
+      const foodsParsed = data.map(item => ({
+        ...item,
+        formattedPrice: formatValue(item.price),
+      })) as Food[];
+
+      setFoods(foodsParsed);
     }
 
     loadFoods();
@@ -68,13 +101,19 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     async function loadCategories(): Promise<void> {
       // Load categories from API
+      const response = await api.get('/categories');
+      setCategories(response.data);
     }
 
     loadCategories();
   }, []);
 
   function handleSelectCategory(id: number): void {
-    // Select / deselect category
+    if (selectedCategory === id) {
+      setSelectedCategory(undefined);
+      return;
+    }
+    setSelectedCategory(id);
   }
 
   return (
